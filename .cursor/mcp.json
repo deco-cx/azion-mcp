@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "azion": {
+      "type": "http",
+      "url": "https://localhost-55998347.deco.host/mcp"
+    }
+  }
+}
