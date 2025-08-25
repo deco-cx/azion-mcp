@@ -22,8 +22,8 @@ export const createDigitalCertificateTool = (env: Env) =>
     description: "Create a digital certificate in Azion for HTTPS domains",
     inputSchema: z.object({
       name: z.string().describe("Name identifier for the certificate"),
-      certificate: z.string().describe("The X.509 certificate content (PEM format)"),
-      private_key: z.string().describe("The private key content (PEM format)"),
+      certificate: z.string().describe("The X.509 certificate content encoded in base64"),
+      private_key: z.string().describe("The private key content encoded in base64"),
     }),
     outputSchema: z.object({
       success: z.boolean(),
@@ -34,6 +34,9 @@ export const createDigitalCertificateTool = (env: Env) =>
       error: z.string().optional(),
     }),
     execute: async ({ context }) => {
+      const certificate = Buffer.from(context.certificate, 'base64').toString('utf-8');
+      const private_key = Buffer.from(context.private_key, 'base64').toString('utf-8');
+
       try {
         const response = await fetch("https://api.azionapi.net/digital_certificates", {
           method: "POST",
@@ -44,8 +47,8 @@ export const createDigitalCertificateTool = (env: Env) =>
           },
           body: JSON.stringify({
             name: context.name,
-            certificate: context.certificate,
-            private_key: context.private_key,
+            certificate,
+            private_key,
           }),
         });
 

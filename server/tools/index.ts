@@ -5,18 +5,12 @@
  * export, making it easy to import all tools in main.ts while keeping
  * the domain separation.
  */
-import { todoTools } from "./todos.ts";
-import { userTools } from "./user.ts";
 import { azionTools } from "./azion.ts";
 
 // Export all tools from all domains
 export const tools = [
-  ...todoTools,
-  ...userTools,
   ...azionTools,
 ];
 
 // Re-export domain-specific tools for direct access if needed
-export { todoTools } from "./todos.ts";
-export { userTools } from "./user.ts";
 export { azionTools } from "./azion.ts";
