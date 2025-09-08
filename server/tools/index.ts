@@ -1,16 +1,22 @@
 /**
- * Central export point for all tools organized by domain.
+ * Central export point for all tools organized by subject.
  * 
- * This file aggregates all tools from different domains into a single
+ * This file aggregates all tools from different subjects into a single
  * export, making it easy to import all tools in main.ts while keeping
- * the domain separation.
+ * the subject separation for better organization.
  */
-import { azionTools } from "./azion.ts";
+import { certificateTools } from "./certificates/index.ts";
+import { domainTools } from "./domains/index.ts";
+import { firewallTools } from "./firewall/index.ts";
 
-// Export all tools from all domains
+// Export all tools from all subjects
 export const tools = [
-  ...azionTools,
+  ...certificateTools,
+  ...domainTools,
+  ...firewallTools,
 ];
 
-// Re-export domain-specific tools for direct access if needed
-export { azionTools } from "./azion.ts";
+// Re-export subject-specific tools for direct access if needed
+export { certificateTools } from "./certificates/index.ts";
+export { domainTools } from "./domains/index.ts";
+export { firewallTools } from "./firewall/index.ts";
