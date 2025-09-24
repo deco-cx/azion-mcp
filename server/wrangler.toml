@@ -21,7 +21,7 @@ new_classes = [ "Workflow" ]
 
 [durable_objects]
 [[durable_objects.bindings]]
-name = "DECO_CHAT_WORKFLOW_DO"
+name = "DECO_WORKFLOW_DO"
 class_name = "Workflow"
 
 [[rules]]

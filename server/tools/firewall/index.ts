@@ -12,40 +12,25 @@ import type { Env } from "../../main.ts";
 // Schema for WAF rule criteria with comprehensive field definitions
 const CriterionSchema = z.object({
   variable: z.enum([
-    // Request variables
-    "request_uri",
-    "request_method", 
-    "request_args",
-    "request_headers",
+    // HTTP Headers
+    "header_accept",
+    "header_accept_encoding", 
+    "header_accept_language",
+    "header_cookie",
+    "header_origin",
+    "header_referer",
+    "header_user_agent",
+    // Request Properties
     "host",
-    "user_agent",
-    "referer",
-    "scheme",
-    "server_protocol",
-    "request_body",
-    "cookie",
-    // Network variables
-    "remote_addr",
     "network",
-    "server_port",
-    "ssl_cipher",
-    "ssl_protocol",
-    // Geolocation variables
-    "geoip_country_code",
-    "geoip_country_name", 
-    "geoip_region",
-    "geoip_region_name",
-    "geoip_city",
-    "geoip_continent_code",
-    "geoip_asn",
-    // Security variables
-    "query_string",
-    "file_extension",
-    "raw_body",
-    // Custom variables
-    "args_names",
-    "args_values"
-  ]).describe("The request variable to evaluate. Available options include request properties (request_uri, request_method, host, user_agent), network info (remote_addr, server_port), geolocation (geoip_country_code, geoip_city), and security features (query_string, file_extension)"),
+    "request_args",
+    "request_method", 
+    "request_uri",
+    "scheme",
+    // Security & SSL
+    "client_certificate_validation",
+    "ssl_verification_status"
+  ]).describe("The request variable to evaluate. HTTP Headers: header_accept, header_accept_encoding, header_accept_language, header_cookie, header_origin, header_referer, header_user_agent. Request Properties: host (hostname), network (IP addresses/CIDR/ASN/Country), request_args (query string), request_method (HTTP method), request_uri (normalized URI), scheme (request scheme). Security: client_certificate_validation (client cert auth), ssl_verification_status (cert validation result)"),
   
   operator: z.enum([
     "is_equal",
@@ -54,20 +39,15 @@ const CriterionSchema = z.object({
     "does_not_start_with",
     "matches",
     "does_not_match",
-    "contains",
-    "does_not_contain",
-    "is_in_list",
-    "is_not_in_list",
     "exists",
     "does_not_exist",
-    "between",
-    "is_greater_than",
-    "is_less_than"
-  ]).describe("Comparison operator to use. Options: is_equal (exact match), is_not_equal (not equal), starts_with (begins with), does_not_start_with, matches (regex), does_not_match, contains (substring), does_not_contain, is_in_list (whitelist), is_not_in_list (blacklist), exists (has value), does_not_exist (no value), between (numeric range), is_greater_than, is_less_than"),
+    "is_in_list",
+    "is_not_in_list"
+  ]).describe("Comparison operator to use. Basic: is_equal (exact match), is_not_equal (not equal), starts_with (begins with), does_not_start_with. Pattern: matches (regex), does_not_match (not regex). Existence: exists (has value), does_not_exist (no value). Network Lists: is_in_list (IP in network list), is_not_in_list (IP not in network list)"),
   
   conditional: z.enum(["if", "and", "or"]).describe("Conditional logic operator: 'if' for first condition, 'and' for additional conditions that must all be true, 'or' for alternative conditions"),
   
-  argument: z.string().describe("The value to compare against. For 'matches'/'does_not_match' use regex patterns. For 'is_in_list'/'is_not_in_list' use comma-separated values. For 'between' use 'min,max' format. For 'exists'/'does_not_exist' this field is optional."),
+  argument: z.string().describe("The value to compare against. For 'matches'/'does_not_match' use regex patterns. For 'is_in_list'/'is_not_in_list' use Network List ID in string format. For 'exists'/'does_not_exist' this field is optional. For 'header_user_agent' use regex format."),
 });
 
 // Schema for WAF rule behaviors with comprehensive options
@@ -75,23 +55,34 @@ const BehaviorSchema = z.object({
   name: z.enum([
     "deny",
     "drop", 
-    "redirect_to_301",
-    "redirect_to_302",
-    "custom_response",
-    "bypass",
-    "rate_limit",
-    "set_waf_ruleset_mode",
-    "set_waf_ruleset_sensitivity",
-    "add_request_header",
-    "remove_request_header",
-    "add_response_header", 
-    "remove_response_header",
-    "set_cache_policy",
-    "set_origin",
-    "run_function"
-  ]).describe("Action to execute when criteria match. Security: deny (403 error), drop (connection drop), redirect_to_301/302 (redirects), custom_response (custom status/body), bypass (allow), rate_limit (throttle). Headers: add_request_header, remove_request_header, add_response_header, remove_response_header. Advanced: set_waf_ruleset_mode, set_waf_ruleset_sensitivity, set_cache_policy, set_origin, run_function"),
+    "set_rate_limit",
+    "set_waf_ruleset",
+    "run_function",
+    "tag_event",
+    "set_custom_response"
+  ]).describe("Action to execute when criteria match. Security: deny (403 Forbidden), drop (Close Without Response). Rate Control: set_rate_limit (apply rate limiting). WAF: set_waf_ruleset (apply WAF rule set). Advanced: run_function (execute function), tag_event (tag event for logging), set_custom_response (send custom response)"),
   
-  argument: z.string().optional().describe("Required argument for specific behaviors: redirect_to_301/302 (target URL), custom_response (status_code|body|content_type), rate_limit (requests_per_second|burst_size|action), add_*_header (header_name:header_value), remove_*_header (header_name), set_waf_ruleset_mode (off|counting|blocking), set_waf_ruleset_sensitivity (low|medium|high), set_cache_policy (policy_id), set_origin (origin_id), run_function (function_id)")
+  argument: z.object({
+    // Rate limit arguments
+    type: z.enum(["second", "minute"]).optional().describe("Time unit for rate limiting"),
+    limit_by: z.enum(["client_ip", "global"]).optional().describe("How to apply rate limit"),
+    average_rate_limit: z.string().optional().describe("Average rate limit as string"),
+    maximum_burst_size: z.string().optional().describe("Maximum burst size as string (required only when type='second')"),
+    
+    // WAF ruleset arguments
+    waf_id: z.number().optional().describe("WAF ID for ruleset"),
+    mode: z.enum(["Learning", "Blocking"]).optional().describe("WAF mode"),
+    
+    // Custom response arguments
+    status_code: z.string().optional().describe("HTTP status code (200-499)"),
+    content_body: z.string().optional().describe("Response body (max 500 characters)"),
+    content_type: z.string().optional().describe("Content type header"),
+    
+    // Function and tag arguments (extensible)
+    function_id: z.string().optional().describe("Function ID for run_function"),
+    tag_name: z.string().optional().describe("Tag name for tag_event"),
+    tag_value: z.string().optional().describe("Tag value for tag_event")
+  }).optional().describe("Behavior arguments object. Required for set_rate_limit, set_waf_ruleset, set_custom_response, run_function, and tag_event behaviors.")
 });
 
 /**
@@ -122,6 +113,14 @@ export const createWafRuleTool = (env: Env) =>
     }),
     execute: async ({ context }) => {
       try {
+
+        console.log("body = ", JSON.stringify({
+          name: context.name,
+          is_active: context.is_active,
+          behaviors: context.behaviors,
+          criteria: context.criteria,
+          order: context.order,
+        }));
         const response = await fetch(`https://api.azionapi.net/edge_firewall/${context.firewall_id}/rules_engine`, {
           method: "POST",
           headers: {
