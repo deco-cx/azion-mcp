@@ -15,6 +15,11 @@ bindings = []
 enable_workflows = true
 local = false
 
+[deco.integration]
+description = "AI-powered edge computing automation for Azion platform. Manage SSL certificates, domains, and edge infrastructure through Model Context Protocol tools."
+friendlyName = "Azion MCP Server"
+icon = "https://media.licdn.com/dms/image/v2/C4D0BAQGiAXvdY1_Qug/company-logo_200_200/company-logo_200_200/0/1630503244316/azionedge_logo?e=2147483647&v=beta&t=3EP63gZCOM1lxonMjS-Hr0b8yXi8pL21kXOYV8NEdb0"
+
 [[migrations]]
 tag = "v1"
 new_classes = [ "Workflow" ]
