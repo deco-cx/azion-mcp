@@ -16,6 +16,7 @@
     "db:generate": "cd server && npm run db:generate"
   },
   "devDependencies": {
+    "deco-cli": "^0.21.1",
     "concurrently": "^9.2.0",
     "typescript": "^5.7.2"
   },
