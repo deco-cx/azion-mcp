@@ -10,10 +10,28 @@ import { z } from "zod";
 import type { Env } from "../../main.ts";
 
 /**
+ * Utility function to decode base64-encoded certificate data.
+ * 
+ * This function handles the conversion from base64 to raw PEM format
+ * that the Azion API expects.
+ */
+function decodeBase64Certificate(base64Data: string): string {
+  try {
+    // Decode base64 to get the raw certificate content
+    const decoded = atob(base64Data);
+    return decoded;
+  } catch (error) {
+    throw new Error(`Invalid base64 certificate data: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
  * Tool to upload a digital certificate to Azion.
  * 
  * This tool uploads a custom SSL/TLS certificate to Azion's Digital Certificates service.
  * The certificate will be used to secure HTTPS connections for domains.
+ * 
+ * Now accepts base64-encoded certificate and private key data.
  */
 export const uploadDigitalCertificateTool = (env: Env) =>
   createPrivateTool({
@@ -21,8 +39,8 @@ export const uploadDigitalCertificateTool = (env: Env) =>
     description: "Upload a digital certificate to Azion for HTTPS domains",
     inputSchema: z.object({
       name: z.string().describe("Name identifier for the certificate"),
-      certificate: z.string().describe("The X.509 certificate content (PEM format)"),
-      private_key: z.string().describe("The private key content (PEM format)"),
+      certificate: z.string().describe("The X.509 certificate content (base64-encoded PEM format)"),
+      private_key: z.string().describe("The private key content (base64-encoded PEM format)"),
     }),
     outputSchema: z.object({
       success: z.boolean(),
@@ -34,6 +52,10 @@ export const uploadDigitalCertificateTool = (env: Env) =>
     }),
     execute: async ({ context }) => {
       try {
+        // Decode base64-encoded certificate and private key
+        const decodedCertificate = decodeBase64Certificate(context.certificate);
+        const decodedPrivateKey = decodeBase64Certificate(context.private_key);
+
         const response = await fetch("https://api.azionapi.net/digital_certificates", {
           method: "POST",
           headers: {
@@ -43,8 +65,8 @@ export const uploadDigitalCertificateTool = (env: Env) =>
           },
           body: JSON.stringify({
             name: context.name,
-            certificate: context.certificate,
-            private_key: context.private_key,
+            certificate: decodedCertificate,
+            private_key: decodedPrivateKey,
           }),
         });
 
@@ -79,6 +101,8 @@ export const uploadDigitalCertificateTool = (env: Env) =>
  * 
  * This tool uploads a Trusted Certificate Authority certificate for
  * mutual TLS authentication configurations.
+ * 
+ * Now accepts base64-encoded certificate data.
  */
 export const createTrustedCACertificateTool = (env: Env) =>
   createPrivateTool({
@@ -86,7 +110,7 @@ export const createTrustedCACertificateTool = (env: Env) =>
     description: "Create a Trusted CA certificate in Azion for mTLS authentication",
     inputSchema: z.object({
       name: z.string().describe("Name identifier for the Trusted CA certificate"),
-      certificate: z.string().describe("The Trusted CA certificate content (PEM format)"),
+      certificate: z.string().describe("The Trusted CA certificate content (base64-encoded PEM format)"),
     }),
     outputSchema: z.object({
       success: z.boolean(),
@@ -99,6 +123,9 @@ export const createTrustedCACertificateTool = (env: Env) =>
     }),
     execute: async ({ context }) => {
       try {
+        // Decode base64-encoded certificate
+        const decodedCertificate = decodeBase64Certificate(context.certificate);
+
         const response = await fetch("https://api.azionapi.net/digital_certificates", {
           method: "POST",
           headers: {
@@ -108,7 +135,7 @@ export const createTrustedCACertificateTool = (env: Env) =>
           },
           body: JSON.stringify({
             name: context.name,
-            certificate: context.certificate,
+            certificate: decodedCertificate,
             certificate_type: "trusted_ca_certificate",
           }),
         });
