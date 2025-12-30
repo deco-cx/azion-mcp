@@ -7,16 +7,19 @@
  */
 import { certificateTools } from "./certificates/index.ts";
 import { domainTools } from "./domains/index.ts";
+import { edgeApplicationTools } from "./edge-application/index.ts";
 import { firewallTools } from "./firewall/index.ts";
 
 // Export all tools from all subjects
 export const tools = [
   ...certificateTools,
   ...domainTools,
+  ...edgeApplicationTools,
   ...firewallTools,
 ];
 
 // Re-export subject-specific tools for direct access if needed
 export { certificateTools } from "./certificates/index.ts";
 export { domainTools } from "./domains/index.ts";
+export { edgeApplicationTools } from "./edge-application/index.ts";
 export { firewallTools } from "./firewall/index.ts";
