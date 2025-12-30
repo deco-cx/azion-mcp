@@ -97,6 +97,100 @@ export const uploadDigitalCertificateTool = (env: Env) =>
   });
 
 /**
+ * Tool to update/patch an existing digital certificate in Azion.
+ * 
+ * This tool allows updating certificate details such as name and certificate content.
+ * Useful for certificate renewal or updating certificate information.
+ * 
+ * Accepts base64-encoded certificate data.
+ */
+export const patchDigitalCertificateTool = (env: Env) =>
+  createPrivateTool({
+    id: "AZION_PATCH_CERTIFICATE",
+    description: "Update an existing digital certificate in Azion",
+    inputSchema: z.object({
+      certificate_id: z.number().describe("The ID of the certificate to update"),
+      name: z.string().optional().describe("New name identifier for the certificate"),
+      certificate: z.string().optional().describe("New certificate content (base64-encoded PEM format)"),
+      private_key: z.string().optional().describe("New private key content (base64-encoded PEM format)"),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      certificate_id: z.number().optional(),
+      name: z.string().optional(),
+      validity: z.string().optional(),
+      status: z.string().optional(),
+      error: z.string().optional(),
+    }),
+    execute: async ({ context }) => {
+      try {
+        // Build the update payload dynamically based on provided fields
+        const updatePayload: Record<string, string> = {};
+        
+        if (context.name) {
+          updatePayload.name = context.name;
+        }
+        
+        if (context.certificate) {
+          // Decode base64-encoded certificate
+          const decodedCertificate = decodeBase64Certificate(context.certificate);
+          updatePayload.certificate = decodedCertificate;
+        }
+
+        if (context.private_key) {
+          // Decode base64-encoded private key
+          const decodedPrivateKey = decodeBase64Certificate(context.private_key);
+          updatePayload.private_key = decodedPrivateKey;
+        }
+
+        // Ensure at least one field is being updated
+        if (Object.keys(updatePayload).length === 0) {
+          return {
+            success: false,
+            error: "At least one field (name, certificate, or private_key) must be provided for update",
+          };
+        }
+
+        const response = await fetch(
+          `https://api.azionapi.net/digital_certificates/${context.certificate_id}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Accept": "application/json; version=3",
+              "Content-Type": "application/json",
+              "Authorization": `Token ${env.DECO_CHAT_REQUEST_CONTEXT.state.azion_token}`,
+            },
+            body: JSON.stringify(updatePayload),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          return {
+            success: false,
+            error: `HTTP ${response.status}: ${errorText}`,
+          };
+        }
+
+        const result = await response.json();
+        
+        return {
+          success: true,
+          certificate_id: result.results?.id,
+          name: result.results?.name,
+          validity: result.results?.validity,
+          status: result.results?.status,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Network error: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    },
+  });
+
+/**
  * Tool to create a Trusted CA certificate for mTLS in Azion.
  * 
  * This tool uploads a Trusted Certificate Authority certificate for
@@ -170,5 +264,6 @@ export const createTrustedCACertificateTool = (env: Env) =>
 // Export all certificate-related tools
 export const certificateTools = [
   uploadDigitalCertificateTool,
+  patchDigitalCertificateTool,
   createTrustedCACertificateTool,
 ];
