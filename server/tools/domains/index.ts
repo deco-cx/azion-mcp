@@ -220,8 +220,61 @@ export const patchDomainTool = (env: Env) =>
     },
   });
 
+/**
+ * Tool to delete a domain from Azion.
+ * 
+ * This tool permanently deletes a domain configuration from Azion.
+ * This will remove the domain and all its associated settings.
+ */
+export const deleteDomainTool = (env: Env) =>
+  createPrivateTool({
+    id: "AZION_DELETE_DOMAIN",
+    description: "Delete a domain configuration from Azion",
+    inputSchema: z.object({
+      domain_id: z.number().describe("The ID of the domain to delete"),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      message: z.string().optional(),
+      error: z.string().optional(),
+    }),
+    execute: async ({ context }) => {
+      try {
+        const response = await fetch(
+          `https://api.azionapi.net/domains/${context.domain_id}`,
+          {
+            method: "DELETE",
+            headers: {
+              "Accept": "application/json; version=3",
+              "Authorization": `Token ${env.DECO_CHAT_REQUEST_CONTEXT.state.azion_token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          return {
+            success: false,
+            error: `HTTP ${response.status}: ${errorText}`,
+          };
+        }
+
+        return {
+          success: true,
+          message: `Domain ${context.domain_id} deleted successfully`,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Network error: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    },
+  });
+
 // Export all domain-related tools
 export const domainTools = [
   createDomainTool,
   patchDomainTool,
+  deleteDomainTool,
 ];
